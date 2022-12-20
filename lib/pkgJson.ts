@@ -1,27 +1,4 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-
-export const getPackageRoot = async (): Promise<string> => {
-  let directory = process.cwd();
-
-  do {
-    try {
-      const stats = await fs.stat(path.join(directory, "package.json"));
-      if (stats.isFile()) {
-        break;
-      }
-    } catch {
-      //
-    }
-    directory = path.dirname(directory);
-  } while (directory !== "/");
-
-  if (directory === "/") {
-    throw new Error("package directory not found");
-  }
-
-  return directory;
-};
+import { read } from "./functions";
 
 type JSONPrimitive = string | number | boolean | null;
 type JSONArray = JSONValue[];
@@ -110,9 +87,8 @@ const expectToBeStringOrStringMap = expecter((value) => {
   );
 });
 
-export const getPackageJson = async (): Promise<PackageJson> => {
-  const json = await fs.readFile(path.join(await getPackageRoot(), "package.json"), "utf8");
-  const obj = (JSON.parse(json) ?? {}) as JSONObject;
+export const pkgJson = (): PackageJson => {
+  const obj = (JSON.parse(read("package.json")) ?? {}) as JSONObject;
   let key = "";
   try {
     for (key of [
