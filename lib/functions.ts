@@ -13,7 +13,11 @@ export const remove = (path: string) => {
   return rmdirSync(path, { recursive: true });
 };
 export const isFile = (path: string) => {
-  return lstatSync(path).isFile();
+  try {
+    return lstatSync(path).isFile();
+  } catch {
+    return false;
+  }
 };
 export const ask = async (prompt: string): Promise<string> => {
   const readlineInterface = createInterface({ input: process.stdin, output: process.stdout });

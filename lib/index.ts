@@ -3,9 +3,10 @@ import { run, read, write, remove, isFile, ask } from "./functions";
 import { pkgJson } from "./pkgJson";
 import { versionToHumanString, versionToSemverString } from "./version";
 import { exec } from "node:child_process";
+import { homedir } from "node:os";
 
 export type Config = {
-  /* custom log function instead of console.log - this lib expects trailing newlines to be added */
+  /* custom log function instead of console.log */
   log: (message: string) => void;
   /* if true, package is not published, and changes are not pushed to remote (but are committed) */
   dryRun: boolean;
@@ -17,7 +18,7 @@ export type Config = {
   build: string | ((nextSemver: string) => Promise<void>);
   checkBuild: string | ((nextSemver: string) => Promise<void>);
   test: string | (() => Promise<void>);
-  checkProject: string | (() => Promise<void>);
+  lint: string | (() => Promise<void>);
 };
 
 export const DEFAULT_CONFIG: Config = {
@@ -25,7 +26,7 @@ export const DEFAULT_CONFIG: Config = {
   log: console.log,
   prevHash: undefined,
   dryRun: false,
-  checkProject: "check-project",
+  lint: "lint",
   build: "build",
   checkBuild: "check-build",
   test: "test",
@@ -48,10 +49,8 @@ export const publish = async (config: Partial<Config>): Promise<boolean> => {
       : cfg.checkBuild;
   const test: Exclude<Config["test"], string> =
     typeof cfg.test === "string" ? runify(cfg.test, true, { stdio: "inherit" }) : cfg.test;
-  const checkProject: Exclude<Config["checkProject"], string> =
-    typeof cfg.checkProject === "string"
-      ? runify(cfg.checkProject, false, { stdio: "inherit" })
-      : cfg.checkProject;
+  const lint: Exclude<Config["lint"], string> =
+    typeof cfg.lint === "string" ? runify(cfg.lint, false, { stdio: "inherit" }) : cfg.lint;
 
   try {
     // preconditions
@@ -101,7 +100,7 @@ export const publish = async (config: Partial<Config>): Promise<boolean> => {
         else resolve(stdout.trim());
       });
     });
-    await checkProject();
+    await lint();
 
     // calculating next version using semantic release principles
     const releaseData = await generateRelease(cfg.prevHash);
@@ -182,27 +181,31 @@ export const publish = async (config: Partial<Config>): Promise<boolean> => {
       }
     }
 
-    run("git add .", { stdio: "inherit" });
-    run(`git commit -m 'ci: release v${nextSemver}'`, { stdio: "inherit" });
-    run(`git tag -a v${nextSemver} -m '${nextSemver}'`, { stdio: "inherit" });
-
-    if (cfg.dryRun) {
-      cfg.log(`dry run: skipping 'git push'`);
-      cfg.log(`dry run: skipping 'git push origin v${nextSemver}'`);
-      run(`npm publish --dry-run`, { stdio: "inherit" });
-    } else {
-      run(`git push`, { stdio: "inherit" });
-      run(`git push origin v${nextSemver}`, { stdio: "inherit" });
-      run(`npm publish`, { stdio: "inherit" });
-
-      if (homepage && homepage.startsWith("https://github.com/")) {
-        cfg.log("Prefilled GitHub release link:");
-        cfg.log(
-          `${homepage}/releases/new?tag=v${nextSemver}&title=v${nextSemver}&body=${encodeURIComponent(
-            generateChangelogMarkdown(releaseData)
-          )}`
-        );
+    const runUnlessDry = (command: string, execOpts: Parameters<typeof run>[1]) => {
+      if (cfg.dryRun) {
+        cfg.log(`dry run (skip): ${command}`);
+      } else {
+        return run(command, execOpts);
       }
+    };
+
+    runUnlessDry("git add .", { stdio: "inherit" });
+    runUnlessDry(`git commit -m 'ci: release v${nextSemver}'`, { stdio: "inherit" });
+    runUnlessDry(`git tag -a v${nextSemver} -m '${nextSemver}'`, { stdio: "inherit" });
+    runUnlessDry(`git push`, { stdio: "inherit" });
+    runUnlessDry(`git push origin v${nextSemver}`, { stdio: "inherit" });
+    if (!isFile(`${homedir()}/.npmrc`)) {
+      runUnlessDry(`npm login`, { stdio: "inherit" });
+    }
+    runUnlessDry(`npm publish`, { stdio: "inherit" });
+
+    if (homepage && homepage.startsWith("https://github.com/")) {
+      cfg.log("Prefilled GitHub release link:");
+      cfg.log(
+        `${homepage}/releases/new?tag=v${nextSemver}&title=v${nextSemver}&body=${encodeURIComponent(
+          generateChangelogMarkdown(releaseData)
+        )}`
+      );
     }
   } catch (error) {
     if (error instanceof Error) {
