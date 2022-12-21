@@ -53,17 +53,16 @@ is cancelled.
 
 ## Background
 
-I created this library because I was unhappy with the alternatives (especially with the install
-size):
+I created this library because I was unhappy with the alternatives (especially the install size):
 
-- `np` is cool, but ![install size](https://packagephobia.com/badge?p=np) and has no semantic
-  release logic
-- `release-it` also cool, but ![install size](https://packagephobia.com/badge?p=release-it)
-- `semantic-release` is cool, but
-  ![install size](https://packagephobia.com/badge?p=semantic-release)
+| package            | install size                                                        |
+| ------------------ | ------------------------------------------------------------------- |
+| `np`               | ![install size](https://packagephobia.com/badge?p=np)               |
+| `release-it`       | ![install size](https://packagephobia.com/badge?p=release-it)       |
+| `semantic-release` | ![install size](https://packagephobia.com/badge?p=semantic-release) |
 
-In particular this project leans into the conventions you may already use in your projects and will
-use your pre-existing project specific scripts in your `package.json`.
+`pub-time` leans into the conventions you may already use in your projects and will use your
+pre-existing project specific scripts in your `package.json`.
 
 ## Install
 
