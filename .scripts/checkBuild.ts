@@ -24,16 +24,24 @@ if (await isFile("cli/index.ts")) {
         console.log(`"${cliName}": "${cliFilePath}" is not an executable file`);
         process.exit(1);
       }
-      const command = `${cliFilePath} arg1 arg2`;
-      const stdout = execSync(command).toString();
-      const expected = `Hello arg1 arg2!\n`;
-      if (stdout !== expected) {
-        console.log(`unexpected response when running: ${command}\n`);
-        console.log("expected:");
-        console.log(JSON.stringify(expected));
-        console.log("actual:");
-        console.log(JSON.stringify(stdout));
-        process.exit(1);
+
+      const command = `${cliFilePath} --dry-run`;
+      fs.rename("package.json", "package2.json");
+      try {
+        const stdout = execSync(command).toString().slice(0, 131);
+        fs.rename("package2.json", "package.json");
+        const expected =
+          "--dry-run:\n  - package will not be published\n  - local git changes will not pushed to remote\n\nError: must be run from package root\n";
+        if (stdout !== expected) {
+          console.log(`unexpected response when running: ${command}\n`);
+          console.log("expected:");
+          console.log(JSON.stringify(expected));
+          console.log("actual:");
+          console.log(JSON.stringify(stdout));
+          process.exit(1);
+        }
+      } catch {
+        fs.rename("package2.json", "package.json");
       }
     }
   }
@@ -52,10 +60,10 @@ if (await isFile("lib/index.ts")) {
       process.exit(1);
     }
 
-    const { hello } = await import(join(process.cwd(), packageJson.module));
+    const { publish } = await import(join(process.cwd(), packageJson.module));
 
-    const result = hello("arg1 arg2");
-    const expected = `Hello arg1 arg2!`;
+    const result = typeof publish;
+    const expected = `function`;
     if (result !== expected) {
       console.log("expected:");
       console.log(JSON.stringify(expected));
@@ -77,10 +85,10 @@ if (await isFile("lib/index.ts")) {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-var-requires, unicorn/prefer-module
-  const { hello } = require(join(process.cwd(), packageJson.main));
+  const { publish } = require(join(process.cwd(), packageJson.main));
 
-  const result = hello("arg1 arg2");
-  const expected = `Hello arg1 arg2!`;
+  const result = typeof publish;
+  const expected = `function`;
   if (result !== expected) {
     console.log("expected:");
     console.log(JSON.stringify(expected));
