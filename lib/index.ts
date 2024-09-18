@@ -1,7 +1,7 @@
 import { generateRelease, generateChangelogMarkdown } from "./conventional";
 import { run, read, write, remove, isFile, ask } from "./functions";
 import { pkgJson } from "./pkgJson";
-import { versionToHumanString, versionToSemverString } from "./version";
+import { parseVersion, versionToHumanString, versionToSemverString } from "./version";
 import { exec } from "node:child_process";
 import { homedir } from "node:os";
 
@@ -14,6 +14,8 @@ export type Config = {
      if a string, will be treated as the hash of the last commit of the prev release
      to force include all commits, use the value 'all' */
   prevHash?: string;
+  /* skips inference completely, blindly trusts the version */
+  version?: string;
   /* custom functions used in publish process */
   build: string | ((nextSemver: string) => Promise<void>);
   checkBuild: string | ((nextSemver: string) => Promise<void>);
@@ -104,6 +106,23 @@ export const publish = async (config: Partial<Config>): Promise<boolean> => {
 
     // calculating next version using semantic release principles
     const releaseData = await generateRelease(cfg.prevHash);
+
+    // override version
+    if (cfg.version !== undefined) {
+      const version = parseVersion(cfg.version);
+      if (
+        cfg.version !== "0.0.0-new" &&
+        version.major === 0 &&
+        version.minor === 0 &&
+        version.patch === 0 &&
+        version.suffix === "new"
+      ) {
+        throw new Error(`Could not parse version: ${JSON.stringify(cfg.version)}`);
+      } else {
+        releaseData.next = version;
+      }
+    }
+
     const nextSemver = versionToSemverString(releaseData.next);
 
     // suggest untestable final sanity checklist
