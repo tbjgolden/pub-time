@@ -15,7 +15,7 @@ export type Config = {
      to force include all commits, use the value 'all' */
   prevHash?: string;
   /* skips inference completely, blindly trusts the version */
-  version?: string;
+  forceVersion?: string;
   /* custom functions used in publish process */
   build: string | ((nextSemver: string) => Promise<void>);
   checkBuild: string | ((nextSemver: string) => Promise<void>);
@@ -108,16 +108,16 @@ export const publish = async (config: Partial<Config>): Promise<boolean> => {
     const releaseData = await generateRelease(cfg.prevHash);
 
     // override version
-    if (cfg.version !== undefined) {
-      const version = parseVersion(cfg.version);
+    if (cfg.forceVersion !== undefined) {
+      const version = parseVersion(cfg.forceVersion);
       if (
-        cfg.version !== "0.0.0-new" &&
+        cfg.forceVersion !== "0.0.0-new" &&
         version.major === 0 &&
         version.minor === 0 &&
         version.patch === 0 &&
         version.suffix === "new"
       ) {
-        throw new Error(`Could not parse version: ${JSON.stringify(cfg.version)}`);
+        throw new Error(`Could not parse version: ${JSON.stringify(cfg.forceVersion)}`);
       } else {
         releaseData.next = version;
       }

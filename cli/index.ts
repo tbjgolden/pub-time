@@ -8,12 +8,12 @@ const program = new Command();
 
 program
   .option("--dry-run", "Perform a dry run without making any changes")
-  .option("--version <version>", "Specify the version")
+  .option("--force-version <version>", "Override the autocalculated version")
   .option("--prev-hash <hash>", "Specify the previous hash");
 
 program.parse(process.argv);
 
-const options = program.opts<{ dryRun?: boolean; version?: string; prevHash?: string }>();
+const options = program.opts<{ dryRun?: boolean; forceVersion?: string; prevHash?: string }>();
 
 publish(options).then((didPublish) => {
   console.log();
