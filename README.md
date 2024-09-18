@@ -76,9 +76,16 @@ npm install pub-time
 
 ```sh
 npx pub-time
-# Options:
-#   --dry-run |
-#   1ad4719d1 | custom commit hash override (manually specify previous release commit)
+```
+
+```
+Usage: pub-time [options]
+
+Options:
+  --dry-run                  Perform a dry run without making any changes
+  --force-version <version>  Override the autocalculated version
+  --prev-hash <hash>         Specify the previous hash
+  -h, --help                 display help for command
 ```
 
 ## API
@@ -99,6 +106,8 @@ export type Config = {
      if a string, will be treated as the hash of the last commit of the prev release
      to force include all commits, use the value 'all' */
   prevHash?: string;
+  /* skips inference completely, blindly trusts the version */
+  forceVersion?: string;
   /* custom functions used in publish process */
   build: string | ((nextSemver: string) => Promise<void>);
   checkBuild: string | ((nextSemver: string) => Promise<void>);
@@ -107,7 +116,6 @@ export type Config = {
 };
 
 export const DEFAULT_CONFIG: Config = {
-  // eslint-disable-next-line no-console
   log: console.log,
   prevHash: undefined,
   dryRun: false,
